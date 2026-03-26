@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@theme {
+  --color-vault-950: #f8fafc;
+  --color-vault-900: #f1f5f9;
+  --color-vault-800: #e2e8f0;
+  --color-vault-700: #cbd5e1;
+  --color-vault-600: #94a3b8;
+  --color-vault-500: #64748b;
+  --color-vault-400: #475569;
+  --color-vault-300: #334155;
+  --color-vault-200: #1e293b;
+  --color-vault-100: #0f172a;
+  --color-vault-50: #020617;
+
+  --color-cyan-accent: #0ea5e9;
+  --color-emerald-accent: #10b981;
+  --color-amber-accent: #f59e0b;
+  --color-rose-accent: #f43f5e;
+  --color-violet-accent: #8b5cf6;
+
+  --color-aws-orange: #ff9900;
+  --color-azure-blue: #0078d4;
+  --color-alibaba-orange: #ff6a00;
+  --color-do-blue: #0080ff;
+
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-display);
+    background-color: var(--color-vault-950);
+    color: var(--color-vault-100);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(14, 165, 233, 0.15);
+    color: #0f172a;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+/* ── Glassmorphism card ──────────────────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.glass-card-hover {
+  transition: all 0.3s ease;
+}
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(14, 165, 233, 0.12);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 32px -8px rgba(14, 165, 233, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
+
+/* ── Status pulse ─────────────────────────────── */
+.status-dot-running {
+  position: relative;
+}
+.status-dot-running::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0;
+  animation: status-ring 2s ease-out infinite;
+}
+
+/* ── Keyframes ────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: scale(0.85); filter: blur(2px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+@keyframes status-ring {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* ── Animation classes ────────────────────────── */
+.animate-fade-in {
+  animation: fade-in 0.5s ease both;
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.5s ease both;
+}
+
+.animate-slide-in {
+  animation: slide-in-left 0.4s ease both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s ease both;
+}
+
+.animate-count-up {
+  animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stagger-1 { animation-delay: 0.04s; }
+.stagger-2 { animation-delay: 0.08s; }
+.stagger-3 { animation-delay: 0.12s; }
+.stagger-4 { animation-delay: 0.16s; }
+.stagger-5 { animation-delay: 0.20s; }
+.stagger-6 { animation-delay: 0.24s; }
+.stagger-7 { animation-delay: 0.28s; }
+.stagger-8 { animation-delay: 0.32s; }

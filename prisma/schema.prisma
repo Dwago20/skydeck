@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model CloudProvider {
+  id        String   @id @default(cuid())
+  name      String   @unique // aws, azure, alibaba, digitalocean
+  label     String // AWS, Azure, etc.
+  status    String   @default("not_configured") // connected, configured, not_configured
+  region    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  instances Instance[]
+  buckets   Bucket[]
+  files     StorageFile[]
+}
+
+model Instance {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  name       String
+  type       String
+  status     String   @default("stopped") // running, stopped, terminated, pending
+  region     String
+  publicIp   String?
+  privateIp  String
+  cpu        Int
+  memory     Int // in GB
+  monthlyCost Float  @default(0)
+  launchTime DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  providerId String
+  provider   CloudProvider @relation(fields: [providerId], references: [id])
+}
+
+model Bucket {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  region       String
+  sizeBytes    BigInt   @default(0)
+  objectCount  Int      @default(0)
+  storageClass String   @default("standard")
+  monthlyCost  Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  providerId String
+  provider   CloudProvider @relation(fields: [providerId], references: [id])
+  files      StorageFile[]
+}
+
+model StorageFile {
+  id          String   @id @default(cuid())
+  key         String
+  sizeBytes   BigInt   @default(0)
+  contentType String   @default("application/octet-stream")
+  lastModified DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bucketId   String
+  bucket     Bucket        @relation(fields: [bucketId], references: [id])
+  providerId String
+  provider   CloudProvider @relation(fields: [providerId], references: [id])
+
+  @@unique([bucketId, key])
+}
+
+model Vpc {
+  id       String @id @default(cuid())
+  name     String @unique
+  provider String
+  cidr     String
+  region   String
+  status   String @default("available")
+
+  subnets        Subnet[]
+  securityGroups SecurityGroup[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subnet {
+  id               String  @id @default(cuid())
+  name             String
+  cidr             String
+  availabilityZone String
+  isPublic         Boolean @default(false)
+  instanceCount    Int     @default(0)
+
+  vpcId String
+  vpc   Vpc    @relation(fields: [vpcId], references: [id])
+}
+
+model SecurityGroup {
+  id            String @id @default(cuid())
+  name          String
+  provider      String
+  inboundRules  Int    @default(0)
+  outboundRules Int    @default(0)
+
+  vpcId String
+  vpc   Vpc    @relation(fields: [vpcId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  type      String // instance, storage, network, security
+  action    String
+  message   String
+  metadata  String?  // JSON string for additional data
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         String    @default("admin") // admin, viewer
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UsageSnapshot {
+  id        String   @id @default(cuid())
+  timestamp DateTime
+  cpu       Float
+  memory    Float
+  network   Float
+  storage   Float
+  createdAt DateTime @default(now())
+}
+
+model CostRecord {
+  id       String @id @default(cuid())
+  provider String // aws, azure, digitalocean, alibaba
+  compute  Float  @default(0)
+  storage  Float  @default(0)
+  network  Float  @default(0)
+  other    Float  @default(0)
+  period   String @default("monthly") // monthly, daily
+  createdAt DateTime @default(now())
+}

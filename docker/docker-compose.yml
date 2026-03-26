@@ -1,0 +1,20 @@
+services:
+  skydeck:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./prisma/dev.db
+      - AWS_REGION=${AWS_REGION:-ap-southeast-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - S3_BUCKET=${S3_BUCKET:-}
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
+    volumes:
+      - skydeck-data:/app/prisma
+    restart: unless-stopped
+
+volumes:
+  skydeck-data:
