@@ -52,3 +52,13 @@ export async function apiPost(url: string, body: Record<string, unknown>) {
   }
   return res.json();
 }
+
+export async function apiDelete(url: string) {
+  const res = await fetch(url, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+

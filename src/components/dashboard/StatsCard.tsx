@@ -26,7 +26,7 @@ export function StatsCard({
   return (
     <div
       className={cn(
-        "glass-card glass-card-hover group relative overflow-hidden rounded-2xl p-5",
+        "glass-card glass-card-hover group relative h-full overflow-hidden rounded-2xl p-5",
         className
       )}
     >

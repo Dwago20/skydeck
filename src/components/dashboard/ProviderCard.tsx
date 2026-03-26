@@ -31,7 +31,7 @@ export function ProviderCard({
   const StatusIcon = sc.icon;
 
   return (
-    <div className="glass-card glass-card-hover group relative overflow-hidden rounded-2xl p-4">
+    <div className="glass-card glass-card-hover group relative h-full overflow-hidden rounded-2xl p-4">
       <div
         className="absolute left-0 top-0 h-full w-[3px] rounded-r-full transition-all duration-500 group-hover:w-[4px]"
         style={{ backgroundColor: color }}

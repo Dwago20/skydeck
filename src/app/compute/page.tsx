@@ -166,7 +166,7 @@ export default function ComputePage() {
 
             return (
               <div key={instance.id} className={`animate-fade-in-scale stagger-${(i % 6) + 1}`}>
-                <div className="glass-card glass-card-hover group overflow-hidden rounded-2xl p-4">
+                <div className="glass-card glass-card-hover group h-full overflow-hidden rounded-2xl p-4">
                   <div>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">

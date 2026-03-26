@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { FileUpload } from "@/components/storage/FileUpload";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { HardDrive, FileBox, Database, DollarSign, Loader2, File, FileText, Image, Download, Trash2 } from "lucide-react";
-import { useApi } from "@/lib/api";
+import { useApi, apiDelete } from "@/lib/api";
 import { formatBytes, formatNumber, timeAgo } from "@/lib/utils";
 import { providerColors, providerLabels } from "@/lib/constants";
 import type { CloudProvider } from "@/lib/types";
@@ -44,7 +45,9 @@ function fileIcon(contentType: string) {
 }
 
 export default function StoragePage() {
-  const { data, loading } = useApi<AssetsResponse>("/api/assets?type=all");
+  const { data, loading, refetch } = useApi<AssetsResponse>("/api/assets?type=all");
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   if (loading || !data) {
     return (
@@ -65,6 +68,49 @@ export default function StoragePage() {
   const totalSize = buckets.reduce((s, b) => s + Number(b.sizeBytes), 0);
   const totalObjects = buckets.reduce((s, b) => s + b.objectCount, 0);
   const totalCost = buckets.reduce((s, b) => s + b.monthlyCost, 0);
+
+  const handleDelete = async (file: FileData) => {
+    if (!confirm(`Delete "${file.key.split("/").pop()}" from ${file.bucket.name}?`)) return;
+
+    const fileId = `${file.bucket.name}-${file.key}`;
+    setDeleting(fileId);
+    try {
+      const isAzure = file.provider.name === "azure";
+      const provider = isAzure ? "azure" : "aws";
+      const params = isAzure
+        ? new URLSearchParams({ container: file.bucket.name, blob: file.key })
+        : new URLSearchParams({ bucket: file.bucket.name, key: file.key });
+      await apiDelete(`/api/storage/${provider}?${params}`);
+      await refetch();
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete file");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleDownload = async (file: FileData) => {
+    const fileId = `${file.bucket.name}-${file.key}`;
+    setDownloading(fileId);
+    try {
+      const provider = file.provider.name === "azure" ? "azure" : "aws";
+      const params = new URLSearchParams({ bucket: file.bucket.name, key: file.key, action: "download" });
+      const res = await fetch(`/api/storage/${provider}?${params}`);
+      const data = await res.json();
+
+      if (data.url) {
+        window.open(data.url, "_blank");
+      } else {
+        alert("Download not available in demo mode — connect a cloud provider to enable downloads.");
+      }
+    } catch (err) {
+      console.error("Download error:", err);
+      alert("Download failed");
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   return (
     <>
@@ -101,7 +147,7 @@ export default function StoragePage() {
               const color = providerColors[bucket.provider.name as CloudProvider] || "#666";
               return (
                 <div key={bucket.id} className={`animate-fade-in-scale stagger-${(i % 6) + 1}`}>
-                  <div className="glass-card glass-card-hover group overflow-hidden rounded-2xl p-4">
+                  <div className="glass-card glass-card-hover group relative h-full overflow-hidden rounded-2xl p-4">
                     <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-[0.06] transition-opacity duration-700 group-hover:opacity-[0.12]" style={{ background: `radial-gradient(circle, ${color}, transparent 70%)` }} />
                     <div className="relative z-10">
                       <div className="flex items-start justify-between">
@@ -142,36 +188,58 @@ export default function StoragePage() {
             <p className="mt-0.5 text-[11px] text-vault-500">{files.length} files across providers</p>
           </div>
           <div className="divide-y divide-vault-800/30">
-            {files.map((file) => {
-              const Icon = fileIcon(file.contentType);
-              const fileName = file.key.split("/").pop() || file.key;
-              const filePath = file.key.split("/").slice(0, -1).join("/");
-              const color = providerColors[file.provider.name as CloudProvider] || "#666";
+            {files.length === 0 ? (
+              <div className="py-8 text-center text-sm text-vault-500">No files uploaded yet</div>
+            ) : (
+              files.map((file) => {
+                const Icon = fileIcon(file.contentType);
+                const fileName = file.key.split("/").pop() || file.key;
+                const filePath = file.key.split("/").slice(0, -1).join("/");
+                const color = providerColors[file.provider.name as CloudProvider] || "#666";
+                const fileId = `${file.bucket.name}-${file.key}`;
+                const isDeleting = deleting === fileId;
+                const isDownloading = downloading === fileId;
 
-              return (
-                <div key={file.id} className="group flex items-center gap-4 px-5 py-3 transition-all duration-300 hover:bg-vault-900/60">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-vault-900 ring-1 ring-vault-800/50 transition-all duration-300 group-hover:scale-105">
-                    <Icon className="h-4 w-4 text-vault-500" />
+                return (
+                  <div key={file.id} className="group flex items-center gap-4 px-5 py-3 transition-all duration-300 hover:bg-vault-900/60">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-vault-900 ring-1 ring-vault-800/50 transition-all duration-300 group-hover:scale-105">
+                      <Icon className="h-4 w-4 text-vault-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-vault-300 transition-colors group-hover:text-vault-100">{fileName}</p>
+                      <p className="truncate text-[11px] text-vault-500">{filePath ? `${filePath} · ` : ""}{file.bucket.name}</p>
+                    </div>
+                    <div className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${color}12`, color }}>
+                      {providerLabels[file.provider.name as CloudProvider] || file.provider.label}
+                    </div>
+                    <div className="w-20 shrink-0 text-right text-xs font-medium text-vault-500">{formatBytes(Number(file.sizeBytes))}</div>
+                    <div className="w-16 shrink-0 text-right text-[11px] text-vault-600">{timeAgo(new Date(file.lastModified))}</div>
+                    <div className="flex shrink-0 gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100">
+                      <button
+                        onClick={() => handleDownload(file)}
+                        disabled={isDownloading}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-vault-500 transition-all hover:bg-vault-900 hover:text-vault-300 disabled:opacity-50"
+                        title="Download"
+                      >
+                        {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(file)}
+                        disabled={isDeleting}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-vault-500 transition-all hover:bg-rose-accent/10 hover:text-rose-accent disabled:opacity-50"
+                        title="Delete"
+                      >
+                        {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-vault-300 transition-colors group-hover:text-vault-100">{fileName}</p>
-                    <p className="truncate text-[11px] text-vault-500">{filePath} &middot; {file.bucket.name}</p>
-                  </div>
-                  <div className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${color}12`, color }}>
-                    {providerLabels[file.provider.name as CloudProvider] || file.provider.label}
-                  </div>
-                  <div className="w-20 shrink-0 text-right text-xs font-medium text-vault-500">{formatBytes(Number(file.sizeBytes))}</div>
-                  <div className="w-16 shrink-0 text-right text-[11px] text-vault-600">{timeAgo(new Date(file.lastModified))}</div>
-                  <div className="flex shrink-0 gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100">
-                    <button className="flex h-7 w-7 items-center justify-center rounded-lg text-vault-500 transition-all hover:bg-vault-900 hover:text-vault-300"><Download className="h-3.5 w-3.5" /></button>
-                    <button className="flex h-7 w-7 items-center justify-center rounded-lg text-vault-500 transition-all hover:bg-rose-accent/10 hover:text-rose-accent"><Trash2 className="h-3.5 w-3.5" /></button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
     </>
   );
 }
+
